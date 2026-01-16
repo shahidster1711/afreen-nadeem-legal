@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +16,7 @@ interface ContactFormRequest {
   requirementType: string;
   description: string;
   urgency: string;
+  documentUrls?: string[];
   honeypot?: string;
 }
 
@@ -83,17 +87,48 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Store submission in database
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    const { error: dbError } = await supabase
+      .from('contact_submissions')
+      .insert({
+        name: data.name.trim(),
+        email: data.email.trim(),
+        requirement_type: data.requirementType,
+        description: data.description.trim(),
+        urgency: data.urgency || 'normal',
+        document_urls: data.documentUrls || [],
+      });
+
+    if (dbError) {
+      console.error("Database insert error:", dbError);
+      // Continue with email even if DB fails
+    } else {
+      console.log("Submission stored in database");
+    }
+
     const timestamp = new Date().toLocaleString('en-IN', { 
       timeZone: 'Asia/Kolkata',
       dateStyle: 'full',
       timeStyle: 'short'
     });
 
+    // Document list for email
+    const documentSection = data.documentUrls && data.documentUrls.length > 0
+      ? `<div class="field">
+          <span class="label">Attached Documents</span>
+          <ul class="value" style="margin: 10px 0 0; padding-left: 20px;">
+            ${data.documentUrls.map((url, i) => `<li><a href="${url}">Document ${i + 1}</a></li>`).join('')}
+          </ul>
+        </div>`
+      : '';
+
     // Send notification email to Afreen
     await sendEmail({
       from: "Afreen Nadeem Legal <onboarding@resend.dev>",
       to: ["afreennadeem.legal@gmail.com"],
-      subject: `New Legal Enquiry: ${data.requirementType}`,
+      subject: `New Legal Enquiry: ${data.requirementType}${data.documentUrls?.length ? ' (with documents)' : ''}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -131,6 +166,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <span class="label">Urgency Level</span>
                 <span class="value">${urgencyLabels[data.urgency] || 'Not specified'}</span>
               </div>
+              ${documentSection}
               <div class="field" style="border-bottom: none;">
                 <span class="label">Requirement Description</span>
                 <p class="value" style="white-space: pre-wrap; margin: 10px 0 0;">${data.description}</p>
@@ -169,7 +205,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div class="content">
               <p>Dear ${data.name},</p>
-              <p>Thank you for reaching out regarding your <strong>${data.requirementType}</strong> requirement. I have received your enquiry and will review it carefully.</p>
+              <p>Thank you for reaching out regarding your <strong>${data.requirementType}</strong> requirement. I have received your enquiry${data.documentUrls?.length ? ` along with ${data.documentUrls.length} document(s)` : ''} and will review it carefully.</p>
               <div class="highlight">
                 <p style="margin: 0;"><strong>What happens next?</strong></p>
                 <p style="margin: 10px 0 0;">I will review your requirement and respond within 24 hours with an initial assessment, scope of work, and engagement terms if applicable.</p>
