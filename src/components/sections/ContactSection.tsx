@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const requirementTypes = [
   "Legal Opinion",
@@ -39,29 +40,89 @@ export const ContactSection = () => {
     requirementType: "",
     description: "",
     urgency: "",
+    honeypot: "", // Spam protection
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Name must be less than 100 characters";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email address";
+    }
+
+    if (!formData.requirementType) {
+      newErrors.requirementType = "Please select a requirement type";
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (formData.description.length > 2000) {
+      newErrors.description = "Description must be less than 2000 characters";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          requirementType: formData.requirementType,
+          description: formData.description.trim(),
+          urgency: formData.urgency || "normal",
+          honeypot: formData.honeypot,
+        },
+      });
 
-    toast({
-      title: "Enquiry Submitted Successfully",
-      description: "I'll review your requirement and get back to you within 24 hours.",
-    });
+      if (error) {
+        throw new Error(error.message || "Failed to submit enquiry");
+      }
 
-    setFormData({
-      name: "",
-      email: "",
-      requirementType: "",
-      description: "",
-      urgency: "",
-    });
-    setIsSubmitting(false);
+      toast({
+        title: "Enquiry Submitted Successfully",
+        description: "I'll review your requirement and get back to you within 24 hours.",
+      });
+
+      setFormData({
+        name: "",
+        email: "",
+        requirementType: "",
+        description: "",
+        urgency: "",
+        honeypot: "",
+      });
+      setErrors({});
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast({
+        title: "Submission Failed",
+        description: "There was an error submitting your enquiry. Please try again or email directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -126,6 +187,17 @@ export const ContactSection = () => {
               onSubmit={handleSubmit}
               className="bg-card rounded-2xl p-8 shadow-elevated"
             >
+              {/* Honeypot - hidden from users */}
+              <input
+                type="text"
+                name="honeypot"
+                value={formData.honeypot}
+                onChange={(e) => setFormData({ ...formData, honeypot: e.target.value })}
+                className="absolute opacity-0 pointer-events-none"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+
               <div className="space-y-6">
                 {/* Name */}
                 <div className="space-y-2">
@@ -136,12 +208,15 @@ export const ContactSection = () => {
                     id="name"
                     placeholder="Your name"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    className="h-12"
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (errors.name) setErrors({ ...errors, name: "" });
+                    }}
+                    className={`h-12 ${errors.name ? 'border-destructive' : ''}`}
                   />
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
+                  )}
                 </div>
 
                 {/* Email */}
@@ -154,12 +229,15 @@ export const ContactSection = () => {
                     type="email"
                     placeholder="your@email.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    required
-                    className="h-12"
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (errors.email) setErrors({ ...errors, email: "" });
+                    }}
+                    className={`h-12 ${errors.email ? 'border-destructive' : ''}`}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
                 </div>
 
                 {/* Requirement Type */}
@@ -169,12 +247,12 @@ export const ContactSection = () => {
                   </Label>
                   <Select
                     value={formData.requirementType}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, requirementType: value })
-                    }
-                    required
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, requirementType: value });
+                      if (errors.requirementType) setErrors({ ...errors, requirementType: "" });
+                    }}
                   >
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className={`h-12 ${errors.requirementType ? 'border-destructive' : ''}`}>
                       <SelectValue placeholder="Select requirement type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -185,6 +263,9 @@ export const ContactSection = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.requirementType && (
+                    <p className="text-sm text-destructive">{errors.requirementType}</p>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -196,13 +277,16 @@ export const ContactSection = () => {
                     id="description"
                     placeholder="Please describe your legal requirement..."
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    required
+                    onChange={(e) => {
+                      setFormData({ ...formData, description: e.target.value });
+                      if (errors.description) setErrors({ ...errors, description: "" });
+                    }}
                     rows={4}
-                    className="resize-none"
+                    className={`resize-none ${errors.description ? 'border-destructive' : ''}`}
                   />
+                  {errors.description && (
+                    <p className="text-sm text-destructive">{errors.description}</p>
+                  )}
                 </div>
 
                 {/* Urgency */}
