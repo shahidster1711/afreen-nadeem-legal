@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { GraduationCap, Award, BookOpen, Users } from "lucide-react";
+import afreenHeadshot from "@/assets/afreen-headshot.jpeg";
 
 const credentials = [
   {
@@ -29,13 +30,30 @@ export const AboutSection = () => {
     <section id="about" className="section-padding bg-background">
       <div className="container-legal">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Left - Credentials */}
+          {/* Left - Photo & Credentials */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
+            className="space-y-8"
           >
+            {/* Headshot Photo */}
+            <div className="flex justify-center lg:justify-start">
+              <div className="relative">
+                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-gold/30 shadow-elevated">
+                  <img
+                    src={afreenHeadshot}
+                    alt="Afreen Nadeem - Legal Professional"
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+                {/* Decorative ring */}
+                <div className="absolute -inset-3 rounded-full border-2 border-primary/20 -z-10" />
+              </div>
+            </div>
+
+            {/* Credentials Grid */}
             <div className="grid grid-cols-2 gap-4">
               {credentials.map((item, index) => (
                 <motion.div
@@ -44,15 +62,15 @@ export const AboutSection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1, duration: 0.5 }}
-                  className="bg-card rounded-xl p-6 shadow-card hover:shadow-elevated transition-shadow border border-border"
+                  className="bg-card rounded-xl p-5 shadow-card hover:shadow-elevated transition-shadow border border-border"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center text-accent mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent mb-3">
                     {item.icon}
                   </div>
-                  <h3 className="font-serif font-semibold text-foreground mb-1">
+                  <h3 className="font-serif font-semibold text-foreground text-sm mb-1">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{item.subtitle}</p>
+                  <p className="text-xs text-muted-foreground">{item.subtitle}</p>
                 </motion.div>
               ))}
             </div>
@@ -63,7 +81,7 @@ export const AboutSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="mt-6 bg-primary/5 rounded-xl p-6 border border-primary/10"
+              className="bg-primary/5 rounded-xl p-6 border border-primary/10"
             >
               <span className="legal-badge mb-4 inline-block">Published Research</span>
               <p className="text-sm text-foreground font-medium">
