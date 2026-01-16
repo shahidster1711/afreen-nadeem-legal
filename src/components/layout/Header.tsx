@@ -21,14 +21,14 @@ export const Header = () => {
         <nav className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <a href="#" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Scale className="w-5 h-5 text-primary-foreground" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary flex items-center justify-center">
+              <Scale className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
-            <div className="hidden sm:block">
-              <span className="font-serif text-lg font-semibold text-foreground">
+            <div>
+              <span className="font-serif text-base sm:text-lg font-semibold text-foreground">
                 Afreen Nadeem
               </span>
-              <p className="text-xs text-muted-foreground -mt-0.5">
+              <p className="text-[10px] sm:text-xs text-muted-foreground -mt-0.5 hidden xs:block">
                 Legal Professional
               </p>
             </div>
