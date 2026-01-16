@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Send, Shield, Clock } from "lucide-react";
+import { Send, Shield, Clock, Upload, X, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,22 @@ const urgencyOptions = [
   { value: "urgent", label: "Urgent (24-48 hours)" },
 ];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'text/plain'
+];
+
+interface UploadedFile {
+  file: File;
+  name: string;
+  size: string;
+}
+
 export const ContactSection = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -40,10 +56,74 @@ export const ContactSection = () => {
     requirementType: "",
     description: "",
     urgency: "",
-    honeypot: "", // Spam protection
+    honeypot: "",
   });
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    for (const file of selectedFiles) {
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "File too large",
+          description: `${file.name} exceeds 10MB limit`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      // Check file type
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} - Only PDF, DOC, DOCX, JPG, PNG, TXT allowed`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      // Check for duplicates
+      if (files.some(f => f.name === file.name)) {
+        continue;
+      }
+
+      // Add to files list (max 5 files)
+      if (files.length < 5) {
+        setFiles(prev => [...prev, {
+          file,
+          name: file.name,
+          size: formatFileSize(file.size),
+        }]);
+      } else {
+        toast({
+          title: "Maximum files reached",
+          description: "You can upload up to 5 documents",
+          variant: "destructive",
+        });
+      }
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (fileName: string) => {
+    setFiles(prev => prev.filter(f => f.name !== fileName));
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -74,6 +154,37 @@ export const ContactSection = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const uploadFiles = async (): Promise<string[]> => {
+    if (files.length === 0) return [];
+
+    setIsUploading(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const fileData of files) {
+        const timestamp = Date.now();
+        const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filePath = `${timestamp}_${sanitizedName}`;
+
+        const { data, error } = await supabase.storage
+          .from('client-documents')
+          .upload(filePath, fileData.file);
+
+        if (error) {
+          console.error('Upload error:', error);
+          throw new Error(`Failed to upload ${fileData.name}`);
+        }
+
+        // Get the file path (not public URL since bucket is private)
+        uploadedUrls.push(data.path);
+      }
+
+      return uploadedUrls;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -84,13 +195,17 @@ export const ContactSection = () => {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+      // Upload files first
+      const documentUrls = await uploadFiles();
+
+      const { error } = await supabase.functions.invoke('send-contact-email', {
         body: {
           name: formData.name.trim(),
           email: formData.email.trim(),
           requirementType: formData.requirementType,
           description: formData.description.trim(),
           urgency: formData.urgency || "normal",
+          documentUrls,
           honeypot: formData.honeypot,
         },
       });
@@ -101,7 +216,7 @@ export const ContactSection = () => {
 
       toast({
         title: "Enquiry Submitted Successfully",
-        description: "I'll review your requirement and get back to you within 24 hours.",
+        description: `I'll review your requirement${files.length > 0 ? ` and ${files.length} document(s)` : ''} and get back to you within 24 hours.`,
       });
 
       setFormData({
@@ -112,6 +227,7 @@ export const ContactSection = () => {
         urgency: "",
         honeypot: "",
       });
+      setFiles([]);
       setErrors({});
     } catch (error) {
       console.error("Form submission error:", error);
@@ -156,7 +272,7 @@ export const ContactSection = () => {
 
             <p className="text-lg text-primary-foreground/80 mb-8">
               Share your legal requirement, and I'll provide you with a tailored 
-              solution. All communications are treated with strict confidentiality.
+              solution. Upload relevant documents for faster assessment.
             </p>
 
             {/* Trust Indicators */}
@@ -173,6 +289,12 @@ export const ContactSection = () => {
                 </div>
                 <span>Response within 24 hours</span>
               </div>
+              <div className="flex items-center gap-3 text-primary-foreground/80">
+                <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                  <Upload className="w-5 h-5 text-accent" />
+                </div>
+                <span>Upload documents for review (PDF, DOC, Images)</span>
+              </div>
             </div>
           </motion.div>
 
@@ -187,7 +309,7 @@ export const ContactSection = () => {
               onSubmit={handleSubmit}
               className="bg-card rounded-2xl p-8 shadow-elevated"
             >
-              {/* Honeypot - hidden from users */}
+              {/* Honeypot */}
               <input
                 type="text"
                 name="honeypot"
@@ -289,6 +411,58 @@ export const ContactSection = () => {
                   )}
                 </div>
 
+                {/* File Upload */}
+                <div className="space-y-2">
+                  <Label className="text-foreground">
+                    Upload Documents <span className="text-muted-foreground text-sm">(Optional, max 5 files)</span>
+                  </Label>
+                  <div 
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-accent/50 transition-colors cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PDF, DOC, DOCX, JPG, PNG, TXT (max 10MB each)
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* File List */}
+                  {files.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      {files.map((file) => (
+                        <div 
+                          key={file.name}
+                          className="flex items-center justify-between bg-muted rounded-lg px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-accent flex-shrink-0" />
+                            <span className="text-sm truncate">{file.name}</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">({file.size})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(file.name)}
+                            className="p-1 hover:bg-background rounded transition-colors"
+                          >
+                            <X className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Urgency */}
                 <div className="space-y-2">
                   <Label className="text-foreground">Urgency</Label>
@@ -317,10 +491,13 @@ export const ContactSection = () => {
                   variant="gold"
                   size="lg"
                   className="w-full"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploading}
                 >
-                  {isSubmitting ? (
-                    "Submitting..."
+                  {isSubmitting || isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isUploading ? "Uploading..." : "Submitting..."}
+                    </>
                   ) : (
                     <>
                       Submit Enquiry
