@@ -40,17 +40,23 @@ export const AboutSection = () => {
           >
             {/* Headshot Photo */}
             <div className="flex justify-center lg:justify-start">
-              <div className="relative">
-                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-gold/30 shadow-elevated">
+              <motion.div 
+                className="relative group cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-gold/30 shadow-elevated transition-all duration-500 group-hover:border-accent group-hover:shadow-gold">
                   <img
                     src={afreenHeadshot}
                     alt="Afreen Nadeem - Legal Professional"
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
-                {/* Decorative ring */}
-                <div className="absolute -inset-3 rounded-full border-2 border-primary/20 -z-10" />
-              </div>
+                {/* Decorative ring with animation */}
+                <div className="absolute -inset-3 rounded-full border-2 border-primary/20 -z-10 transition-all duration-500 group-hover:border-accent/40 group-hover:-inset-4" />
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 rounded-full bg-accent/0 group-hover:bg-accent/5 transition-all duration-500 -z-5" />
+              </motion.div>
             </div>
 
             {/* Credentials Grid */}

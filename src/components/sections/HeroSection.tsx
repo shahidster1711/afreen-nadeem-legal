@@ -36,10 +36,11 @@ export const HeroSection = () => {
             </motion.div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight mb-6">
               Legal Drafting,{" "}
               <span className="text-gold">Legal Opinions</span>
-              <br />& Research-Driven Solutions
+              <br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>& Research-Driven Solutions
             </h1>
 
             {/* Subheadline */}
@@ -49,14 +50,14 @@ export const HeroSection = () => {
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button variant="hero" size="xl" asChild>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+              <Button variant="hero" size="xl" className="w-full sm:w-auto text-sm sm:text-base" asChild>
                 <a href="#contact" className="group">
                   Request a Legal Opinion
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>
-              <Button variant="heroOutline" size="xl" asChild>
+              <Button variant="heroOutline" size="xl" className="w-full sm:w-auto text-sm sm:text-base" asChild>
                 <a href="#contact">Book a Consultation</a>
               </Button>
             </div>
@@ -66,18 +67,18 @@ export const HeroSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
-              className="mt-12 flex flex-wrap gap-6 justify-center lg:justify-start text-primary-foreground/70 text-sm"
+              className="mt-8 sm:mt-12 flex flex-wrap gap-3 sm:gap-6 justify-center lg:justify-start text-primary-foreground/70 text-xs sm:text-sm"
             >
-              <div className="flex items-center gap-2">
-                <Scale className="w-4 h-4 text-accent" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                 <span>LL.M Constitutional Law</span>
               </div>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-accent" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                 <span>PhD (Pursuing)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-accent" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                 <span>Pan-India & International</span>
               </div>
             </motion.div>
