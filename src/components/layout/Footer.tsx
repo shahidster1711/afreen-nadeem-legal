@@ -102,11 +102,11 @@ export const Footer = () => {
             <p className="text-sm text-primary-foreground/50 text-center md:text-left">
               © {currentYear} Afreen Nadeem. All rights reserved.
             </p>
-            <p className="text-xs text-primary-foreground/40 text-center md:text-right max-w-xl">
+            <nav aria-label="Legal" className="text-xs text-primary-foreground/40 text-center md:text-right max-w-xl">
               <strong>Disclaimer:</strong> This website is for informational purposes only 
               and does not constitute legal solicitation. For specific legal advice, please 
               schedule a consultation.
-            </p>
+            </nav>
           </div>
         </div>
       </div>
