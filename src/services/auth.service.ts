@@ -5,9 +5,22 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  User,
+  AuthError as FirebaseAuthError // Renaming to avoid naming conflicts
 } from 'firebase/auth';
 import { auth } from '../firebase';
+
+// Define a clear and reusable error structure
+export interface AuthError {
+  code: string;
+  message: string;
+}
+
+// The service now returns a consistent object shape for both success and failure
+interface AuthResult {
+  user: User | null;
+  error: AuthError | null;
+}
 
 class AuthService {
   private auth: Auth;
@@ -16,24 +29,27 @@ class AuthService {
     this.auth = auth;
   }
 
-  async signIn(email: string, password: string): Promise<User | null> {
+  // Updated signIn to return the AuthResult object
+  async signIn(email: string, password: string): Promise<AuthResult> {
     try {
       const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
-      return userCredential.user;
+      return { user: userCredential.user, error: null };
     } catch (error) {
-      console.error('Error signing in:', error);
-      return null;
+      const authError = error as FirebaseAuthError;
+      console.error('Error signing in:', authError);
+      return { user: null, error: { code: authError.code, message: authError.message } };
     }
   }
 
-  async signUp(email: string, password: string): Promise<User | null> {
+  // Updated signUp to return the AuthResult object
+  async signUp(email: string, password: string): Promise<AuthResult> {
     try {
       const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-      // You might want to send a verification email here
-      return userCredential.user;
+      return { user: userCredential.user, error: null };
     } catch (error) {
-      console.error('Error signing up:', error);
-      return null;
+      const authError = error as FirebaseAuthError;
+      console.error('Error signing up:', authError);
+      return { user: null, error: { code: authError.code, message: authError.message } };
     }
   }
 

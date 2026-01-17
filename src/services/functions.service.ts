@@ -1,5 +1,8 @@
 
-import { Functions, httpsCallable } from 'firebase/functions';
+import { 
+  Functions, 
+  httpsCallable, 
+} from 'firebase/functions';
 import { functions } from '../firebase';
 
 class FunctionsService {
@@ -8,10 +11,25 @@ class FunctionsService {
   constructor(functions: Functions) {
     this.functions = functions;
   }
+  
+  async call(functionName: string, data: any): Promise<any> {
+    try {
+      const callable = httpsCallable(this.functions, functionName);
+      return await callable(data);
+    } catch (error) {
+      console.error(`Error calling function ${functionName}:`, error);
+      throw error;
+    }
+  }
 
-  async call<T>(functionName: string, data: T): Promise<any> {
-    const callable = httpsCallable(this.functions, functionName);
-    return await callable(data);
+  async sendStatusUpdateEmail(submissionId: string, clientName: string, clientEmail: string, newStatus: string, previousStatus: string): Promise<any> {
+    return this.call('sendStatusUpdateEmail', { 
+      submissionId, 
+      clientName, 
+      clientEmail, 
+      newStatus, 
+      previousStatus 
+    });
   }
 }
 

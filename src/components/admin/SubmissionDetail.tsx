@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase';
+import { functionsService } from '@/services/functions.service';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge, { SubmissionStatus } from './StatusBadge';
-import { Mail, Calendar, FileText, User, Loader2, ExternalLink, Clock, MessageSquare } from 'lucide-react';
+import { User, FileText, Clock, Calendar, MessageSquare, ExternalLink, Loader2 } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -46,6 +47,12 @@ const SubmissionDetail = ({ submission, isOpen, onClose, onUpdate }: SubmissionD
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (submission) {
+      setNotes(submission.notes || '');
+    }
+  }, [submission]);
+
   const handleStatusUpdate = async () => {
     if (!submission || !newStatus) return;
     
@@ -54,28 +61,23 @@ const SubmissionDetail = ({ submission, isOpen, onClose, onUpdate }: SubmissionD
     
     try {
       // Update in database
-      const { error: updateError } = await supabase
-        .from('contact_submissions')
-        .update({ 
-          status: newStatus,
-          notes: notes || submission.notes,
-        })
-        .eq('id', submission.id);
+      const submissionRef = doc(db, 'contact_submissions', submission.id);
+      await updateDoc(submissionRef, { 
+        status: newStatus,
+        notes: notes ?? null,
+        updated_at: new Date(),
+      });
       
-      if (updateError) throw updateError;
-      
-      // Send status update email
-      const { error: emailError } = await supabase.functions.invoke('send-status-update-email', {
-        body: {
+      // Send status update email using Firebase Cloud Functions
+      try {
+        await functionsService.call('sendStatusUpdateEmail', {
           submissionId: submission.id,
           clientName: submission.name,
           clientEmail: submission.email,
           newStatus: newStatus,
           previousStatus: previousStatus,
-        },
-      });
-      
-      if (emailError) {
+        });
+      } catch (emailError) {
         console.error('Email notification error:', emailError);
         // Don't fail the update if email fails
       }
@@ -106,12 +108,11 @@ const SubmissionDetail = ({ submission, isOpen, onClose, onUpdate }: SubmissionD
     setIsUpdating(true);
     
     try {
-      const { error } = await supabase
-        .from('contact_submissions')
-        .update({ notes })
-        .eq('id', submission.id);
-      
-      if (error) throw error;
+      const submissionRef = doc(db, 'contact_submissions', submission.id);
+      await updateDoc(submissionRef, { 
+        notes: notes ?? null,
+        updated_at: new Date(),
+      });
       
       toast({
         title: 'Notes Saved',
@@ -130,11 +131,6 @@ const SubmissionDetail = ({ submission, isOpen, onClose, onUpdate }: SubmissionD
       setIsUpdating(false);
     }
   };
-
-  // Reset form when submission changes
-  if (submission && notes !== (submission.notes || '')) {
-    if (!notes) setNotes(submission.notes || '');
-  }
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>

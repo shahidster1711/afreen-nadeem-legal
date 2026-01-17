@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { db } from '@/firebase';
 import {
   Table,
   TableBody,
@@ -26,8 +27,23 @@ interface Submission {
   status: SubmissionStatus;
   notes: string | null;
   document_urls: string[] | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string; // Storing as ISO string
+  updated_at: string; // Storing as ISO string
+}
+
+// Raw data structure from Firestore
+interface FirestoreSubmission {
+  id: string;
+  name: string;
+  email: string;
+  requirement_type: string;
+  description: string;
+  urgency: string;
+  status: SubmissionStatus;
+  notes: string | null;
+  document_urls: string[] | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
 }
 
 const SubmissionsTable = () => {
@@ -41,24 +57,30 @@ const SubmissionsTable = () => {
   const fetchSubmissions = async () => {
     setIsLoading(true);
     try {
-      let query = supabase
-        .from('contact_submissions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const submissionsRef = collection(db, 'contact_submissions');
+      let q = query(submissionsRef, orderBy('created_at', 'desc'));
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        q = query(q, where('status', '==', statusFilter));
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map((doc) => {
+        const docData = doc.data() as Omit<FirestoreSubmission, 'id'>;
+        return {
+          id: doc.id,
+          ...docData,
+          // Convert Firestore Timestamps to ISO strings for reliable date handling
+          created_at: docData.created_at.toDate().toISOString(),
+          updated_at: docData.updated_at.toDate().toISOString(),
+        };
+      });
 
       // Map database status values to our SubmissionStatus type
-      const mappedData = (data || []).map(item => ({
+      const mappedData = data.map(item => ({
         ...item,
         status: mapDatabaseStatus(item.status),
-      })) as Submission[];
+      }));
 
       setSubmissions(mappedData);
     } catch (err) {
@@ -89,11 +111,11 @@ const SubmissionsTable = () => {
 
   const filteredSubmissions = submissions.filter((submission) => {
     if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
+    const lowercasedQuery = searchQuery.toLowerCase();
     return (
-      submission.name.toLowerCase().includes(query) ||
-      submission.email.toLowerCase().includes(query) ||
-      submission.requirement_type.toLowerCase().includes(query)
+      submission.name.toLowerCase().includes(lowercasedQuery) ||
+      submission.email.toLowerCase().includes(lowercasedQuery) ||
+      submission.requirement_type.toLowerCase().includes(lowercasedQuery)
     );
   });
 

@@ -26,6 +26,8 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // This effect handles one simple case: if a user who is already a logged-in
+  // admin lands on this page, we send them straight to the dashboard.
   useEffect(() => {
     if (!isLoading && user && isAdmin) {
       navigate('/admin');
@@ -36,13 +38,11 @@ const AdminLogin = () => {
     e.preventDefault();
     setErrors({});
     
-    // Validate input
-    const result = loginSchema.safeParse({ email, password });
-    if (!result.success) {
-      const fieldErrors: { email?: string; password?: string } = {};
-      result.error.errors.forEach((err) => {
-        if (err.path[0] === 'email') fieldErrors.email = err.message;
-        if (err.path[0] === 'password') fieldErrors.password = err.message;
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const fieldErrors: { [key: string]: string } = {};
+      validation.error.errors.forEach((err) => {
+        fieldErrors[err.path[0]] = err.message;
       });
       setErrors(fieldErrors);
       return;
@@ -50,35 +50,26 @@ const AdminLogin = () => {
 
     setIsSubmitting(true);
     
-    try {
-      const { error } = await signIn(email, password);
-      
-      if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Authentication Failed',
-          description: error.message === 'Invalid login credentials' 
-            ? 'Invalid email or password. Please try again.'
-            : error.message,
-        });
-        return;
-      }
-
-      toast({
-        title: 'Welcome back!',
-        description: 'Redirecting to dashboard...',
-      });
-    } catch (err) {
+    // The new signIn function is now the single source of truth.
+    // It will only succeed if the user is a verified admin.
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      // If there's an error (either auth or not-admin), we show it.
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
+        title: 'Login Failed',
+        description: error.message,
       });
-    } finally {
       setIsSubmitting(false);
+    } else {
+      // On success, we know the user is an admin. Navigate to the dashboard.
+      toast({ title: 'Login Successful', description: 'Redirecting to dashboard...' });
+      navigate('/admin');
     }
   };
 
+  // Display a loader during the initial session check
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -143,6 +134,7 @@ const AdminLogin = () => {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "afreenlegalsite"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

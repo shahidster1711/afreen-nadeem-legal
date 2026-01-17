@@ -294,6 +294,7 @@ export const ContactSection = () => {
             <form
               onSubmit={handleSubmit}
               className="bg-card rounded-2xl p-8 shadow-elevated"
+              aria-label="Contact Form"
             >
               {/* Honeypot */}
               <input

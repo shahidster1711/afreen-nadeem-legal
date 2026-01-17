@@ -1,14 +1,27 @@
 {
-  "apphosting": {
-    "backendId": "afreenlegal-backend",
-    "rootDir": "/",
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "dist",
     "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
-    ]
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "firebase-sdk-auto-injection": false
+  },
+  "storage": {
+    "rules": "storage.rules"
   },
   "functions": {
     "source": "functions"
