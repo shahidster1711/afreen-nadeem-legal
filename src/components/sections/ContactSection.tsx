@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { storageService } from "@/services/storage.service";
+import { functionsService } from "@/services/functions.service";
 
 const requirementTypes = [
   "Legal Opinion",
@@ -164,19 +165,10 @@ export const ContactSection = () => {
       for (const fileData of files) {
         const timestamp = Date.now();
         const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const filePath = `${timestamp}_${sanitizedName}`;
+        const filePath = `client-documents/${timestamp}_${sanitizedName}`;
 
-        const { data, error } = await supabase.storage
-          .from('client-documents')
-          .upload(filePath, fileData.file);
-
-        if (error) {
-          console.error('Upload error:', error);
-          throw new Error(`Failed to upload ${fileData.name}`);
-        }
-
-        // Get the file path (not public URL since bucket is private)
-        uploadedUrls.push(data.path);
+        const downloadUrl = await storageService.uploadFile(fileData.file, filePath);
+        uploadedUrls.push(downloadUrl);
       }
 
       return uploadedUrls;
@@ -198,21 +190,15 @@ export const ContactSection = () => {
       // Upload files first
       const documentUrls = await uploadFiles();
 
-      const { error } = await supabase.functions.invoke('send-contact-email', {
-        body: {
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          requirementType: formData.requirementType,
-          description: formData.description.trim(),
-          urgency: formData.urgency || "normal",
-          documentUrls,
-          honeypot: formData.honeypot,
-        },
+      await functionsService.call('sendContactEmail', {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        requirementType: formData.requirementType,
+        description: formData.description.trim(),
+        urgency: formData.urgency || "normal",
+        documentUrls,
+        honeypot: formData.honeypot,
       });
-
-      if (error) {
-        throw new Error(error.message || "Failed to submit enquiry");
-      }
 
       toast({
         title: "Enquiry Submitted Successfully",
