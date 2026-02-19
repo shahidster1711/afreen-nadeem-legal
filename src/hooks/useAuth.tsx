@@ -1,9 +1,7 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/firebase';
 import { authService, AuthError } from '@/services/auth.service';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -26,11 +24,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = authService.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // const userDocRef = doc(db, 'users', currentUser.uid);
-        // const userDoc = await getDoc(userDocRef);
-        // const adminStatus = userDoc.exists() && userDoc.data().role === 'admin';
-        // setIsAdmin(adminStatus);
-        setIsAdmin(true); // TEMPORARY: Grant admin privileges to any logged-in user
+        try {
+          const { data } = await supabase
+            .rpc('has_role', { _user_id: currentUser.uid, _role: 'admin' });
+          setIsAdmin(!!data);
+        } catch {
+          setIsAdmin(false);
+        }
       } else {
         setIsAdmin(false);
       }
@@ -52,27 +52,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (firebaseUser) {
       try {
-        // Perform the admin check immediately after successful authentication
-        // const userDocRef = doc(db, 'users', firebaseUser.uid);
-        // const userDoc = await getDoc(userDocRef);
-        // const adminStatus = userDoc.exists() && userDoc.data().role === 'admin';
+        const { data: adminStatus } = await supabase
+          .rpc('has_role', { _user_id: firebaseUser.uid, _role: 'admin' });
         
-        // if (adminStatus) {
-        if (true) { // TEMPORARY: Grant admin privileges to any logged-in user
-          // If admin, set state and return success
+        if (adminStatus) {
           setUser(firebaseUser);
           setIsAdmin(true);
           setIsLoading(false);
           return { user: firebaseUser, error: null };
         } else {
-          // If not an admin, sign them out immediately and return a specific error.
           await authService.signOut();
           setUser(null);
           setIsAdmin(false);
           setIsLoading(false);
           return { user: null, error: { code: 'auth/not-admin', message: 'You do not have permission to access the admin area.' } };
         }
-      } catch (firestoreError) {
+      } catch (roleCheckError) {
         // If the database check fails, sign out and return an error.
         await authService.signOut();
         setUser(null);

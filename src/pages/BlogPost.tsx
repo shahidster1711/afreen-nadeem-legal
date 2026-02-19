@@ -5,6 +5,51 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import React from "react";
+
+/** Safely renders markdown-like content as React elements instead of dangerouslySetInnerHTML */
+const renderMarkdown = (content: string): React.ReactNode[] => {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let key = 0;
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={key++} className="list-disc pl-6 space-y-1">
+          {listItems.map((item, i) => (
+            <li key={i} className="text-muted-foreground">{renderInline(item)}</li>
+          ))}
+        </ul>
+      );
+      listItems = [];
+    }
+  };
+
+  const renderInline = (text: string): React.ReactNode => {
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**'))
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      if (part.startsWith('*') && part.endsWith('*'))
+        return <em key={i}>{part.slice(1, -1)}</em>;
+      return part;
+    });
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { flushList(); continue; }
+    if (trimmed.startsWith('## ')) { flushList(); elements.push(<h2 key={key++} className="font-serif text-2xl font-bold mt-10 mb-4">{trimmed.slice(3)}</h2>); }
+    else if (trimmed.startsWith('### ')) { flushList(); elements.push(<h3 key={key++} className="font-serif text-xl font-semibold mt-8 mb-3">{trimmed.slice(4)}</h3>); }
+    else if (trimmed === '---') { flushList(); elements.push(<hr key={key++} className="my-10 border-border" />); }
+    else if (trimmed.startsWith('- ')) { listItems.push(trimmed.slice(2)); }
+    else { flushList(); elements.push(<p key={key++} className="text-muted-foreground leading-relaxed">{renderInline(trimmed)}</p>); }
+  }
+  flushList();
+  return elements;
+};
 
 // Sample blog content - in a real app, this would come from a CMS or API
 const blogContent: Record<string, {
@@ -244,19 +289,9 @@ const BlogPost = () => {
 
               {/* Article Content */}
               <article className="prose prose-lg max-w-none">
-                <div 
-                  className="space-y-6 text-foreground"
-                  dangerouslySetInnerHTML={{ 
-                    __html: post.content
-                      .replace(/^## (.*$)/gim, '<h2 class="font-serif text-2xl font-bold mt-10 mb-4">$1</h2>')
-                      .replace(/^### (.*$)/gim, '<h3 class="font-serif text-xl font-semibold mt-8 mb-3">$1</h3>')
-                      .replace(/^- (.*$)/gim, '<li class="ml-4 text-muted-foreground">$1</li>')
-                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                      .replace(/^---$/gim, '<hr class="my-10 border-border" />')
-                      .replace(/\n\n/g, '</p><p class="text-muted-foreground leading-relaxed">')
-                  }} 
-                />
+                <div className="space-y-6 text-foreground">
+                  {renderMarkdown(post.content)}
+                </div>
               </article>
 
               {/* CTA */}

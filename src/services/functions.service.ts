@@ -12,10 +12,11 @@ class FunctionsService {
     this.functions = functions;
   }
   
-  async call(functionName: string, data: any): Promise<any> {
+  async call<TData = Record<string, unknown>, TResult = unknown>(functionName: string, data: TData): Promise<TResult> {
     try {
-      const callable = httpsCallable(this.functions, functionName);
-      return await callable(data);
+      const callable = httpsCallable<TData, TResult>(this.functions, functionName);
+      const result = await callable(data);
+      return result.data;
     } catch (error) {
       console.error(`Error calling function ${functionName}:`, error);
       throw error;

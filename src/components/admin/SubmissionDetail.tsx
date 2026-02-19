@@ -9,22 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import StatusBadge, { SubmissionStatus } from './StatusBadge';
+import StatusBadge from './StatusBadge';
+import type { SubmissionStatus } from '@/types/submission';
+import type { Submission } from '@/types/submission';
 import { User, FileText, Clock, Calendar, MessageSquare, ExternalLink, Loader2 } from 'lucide-react';
-
-interface Submission {
-  id: string;
-  name: string;
-  email: string;
-  requirement_type: string;
-  description: string;
-  urgency: string;
-  status: SubmissionStatus;
-  notes: string | null;
-  document_urls: string[] | null;
-  created_at: string;
-  updated_at: string;
-}
 
 interface SubmissionDetailProps {
   submission: Submission | null;

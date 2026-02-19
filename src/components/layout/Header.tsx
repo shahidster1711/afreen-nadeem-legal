@@ -28,7 +28,7 @@ export const Header = () => {
               <span className="font-serif text-base sm:text-lg font-semibold text-foreground">
                 Afreen Nadeem
               </span>
-              <p className="text-[10px] sm:text-xs text-muted-foreground -mt-0.5 hidden xs:block">
+              <p className="text-[10px] sm:text-xs text-muted-foreground -mt-0.5 hidden sm:block">
                 Legal Professional
               </p>
             </div>
