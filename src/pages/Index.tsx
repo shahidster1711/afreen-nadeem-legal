@@ -1,7 +1,4 @@
-
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -60,11 +57,6 @@ const Index = () => {
         </main>
         <Footer />
       </div>
-      <div className="fixed bottom-4 right-4 z-50">
-      <Link to="/admin/login">
-        <Button size="sm">Admin</Button>
-      </Link>
-    </div>
     </>
   );
 };

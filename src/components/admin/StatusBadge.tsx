@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
-export type SubmissionStatus = 'new' | 'in_review' | 'awaiting_client' | 'responded' | 'closed';
+import type { SubmissionStatus } from '@/types/submission';
+export type { SubmissionStatus } from '@/types/submission';
 
 interface StatusBadgeProps {
   status: SubmissionStatus;

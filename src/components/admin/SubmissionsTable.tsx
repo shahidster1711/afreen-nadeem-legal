@@ -13,23 +13,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import StatusBadge, { SubmissionStatus } from './StatusBadge';
+import StatusBadge from './StatusBadge';
 import SubmissionDetail from './SubmissionDetail';
 import { Search, RefreshCw, Eye, FileText, Loader2, Inbox } from 'lucide-react';
-
-interface Submission {
-  id: string;
-  name: string;
-  email: string;
-  requirement_type: string;
-  description: string;
-  urgency: string;
-  status: SubmissionStatus;
-  notes: string | null;
-  document_urls: string[] | null;
-  created_at: string; // Storing as ISO string
-  updated_at: string; // Storing as ISO string
-}
+import type { Submission, SubmissionStatus } from '@/types/submission';
 
 // Raw data structure from Firestore
 interface FirestoreSubmission {
@@ -107,6 +94,7 @@ const SubmissionsTable = () => {
 
   useEffect(() => {
     fetchSubmissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const filteredSubmissions = submissions.filter((submission) => {
